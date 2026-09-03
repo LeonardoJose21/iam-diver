@@ -1,5 +1,21 @@
 @import url("https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@400;500;600;700;800;900&family=Archivo:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
 
+html,
+body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
+  background-color: #222831;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .iad-root {
   --ink: #222831;
   --charcoal: #393e46;
@@ -14,7 +30,9 @@
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
   position: relative;
+  width: 100%;
 }
+
 .iad-root * {
   box-sizing: border-box;
 }

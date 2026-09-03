@@ -47,9 +47,61 @@ const formatCOP = (n) => `${new Intl.NumberFormat("es-CO").format(n)} COP`;
 --------------------------------------------------------------- */
 
 const LANGS = [
-  { code: "es", label: "ESPAÑOL" },
-  { code: "en", label: "ENGLISH" },
-  { code: "de", label: "DEUTSCH" },
+  {
+    code: "es",
+    label: "ESPAÑOL",
+    flag: (
+      <svg
+        width="18"
+        height="13"
+        viewBox="0 0 640 480"
+        style={{ borderRadius: "2px" }}
+      >
+        <path fill="#c60b1e" d="M0 0h640v480H0z" />
+        <path fill="#ffc400" d="M0 120h640v240H0z" />
+      </svg>
+    ),
+  },
+  {
+    code: "en",
+    label: "ENGLISH",
+    flag: (
+      <svg
+        width="18"
+        height="13"
+        viewBox="0 0 640 480"
+        style={{ borderRadius: "2px" }}
+      >
+        <path fill="#012169" d="M0 0h640v480H0z" />
+        <path
+          fill="#FFF"
+          d="m75 0 245 180L565 0h75v50L395 240l245 190v50h-75L320 300 75 480H0v-50l245-190L0 50V0h75z"
+        />
+        <path
+          fill="#C8102E"
+          d="m424 261 216 164v25l-228-172h12zm-208 0L0 425v25l228-172h-12zM0 30l216 163h12L0 18V30zm640 0L424 193h-12l228-175V30z"
+        />
+        <path fill="#FFF" d="M240 0h160v480H240zM0 160h640v160H0z" />
+        <path fill="#C8102E" d="M267 0h106v480H267zM0 187h640v106H0z" />
+      </svg>
+    ),
+  },
+  {
+    code: "de",
+    label: "DEUTSCH",
+    flag: (
+      <svg
+        width="18"
+        height="13"
+        viewBox="0 0 640 480"
+        style={{ borderRadius: "2px" }}
+      >
+        <path fill="#000" d="M0 0h640v160H0z" />
+        <path fill="#DD0000" d="M0 160h640v160H0z" />
+        <path fill="#FFCC00" d="M0 320h640v160H0z" />
+      </svg>
+    ),
+  },
 ];
 
 function useRevealOnScroll() {
@@ -297,7 +349,9 @@ export default function IAmDiverLanding() {
                 aria-haspopup="true"
                 aria-expanded={langMenuOpen}
               >
-                <Globe size={14} />
+                <span style={{ display: "inline-flex", alignItems: "center" }}>
+                  {LANGS.find((l) => l.code === lang)?.flag}
+                </span>
                 {lang.toUpperCase()}
               </button>
               {langMenuOpen && (
@@ -311,6 +365,15 @@ export default function IAmDiverLanding() {
                         setLangMenuOpen(false);
                       }}
                     >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          marginRight: "8px",
+                        }}
+                      >
+                        {l.flag}
+                      </span>
                       {l.label}
                     </button>
                   ))}
@@ -360,12 +423,18 @@ export default function IAmDiverLanding() {
               {t.nav.faq}
             </a>
             <button
-              className="iad-mobile-menu-cta"
+              className="btn-primary iad-mobile-menu-cta"
+              style={{
+                width: "100%",
+                justifyContent: "center",
+                marginTop: "12px",
+              }}
               onClick={() => {
                 setMenuOpen(false);
                 handleCtaClick();
               }}
             >
+              <CalendarCheck size={17} />
               {t.hero.ctaPrimary}
             </button>
           </div>
@@ -585,29 +654,26 @@ export default function IAmDiverLanding() {
                         </ul>
 
                         <div className="service-action-row">
-  <button
-    className={`manifest-add ${inCart ? "added" : ""}`}
-    onClick={() => addToCart(c.id)}
-  >
-    <ShoppingBag size={15} />
-    {inCart
-      ? `${t.courses.addedBtn} (${cart[c.id]})`
-      : t.courses.addBtn}
-  </button>
+                          <button
+                            className={`manifest-add ${inCart ? "added" : ""}`}
+                            onClick={() => addToCart(c.id)}
+                          >
+                            <ShoppingBag size={15} />
+                            {inCart
+                              ? `${t.courses.addedBtn} (${cart[c.id]})`
+                              : t.courses.addBtn}
+                          </button>
 
-  {inCart && (
-    <button
-      className="btn-primary btn-pay-now"
-      onClick={() => {
-        setCheckoutOpen(true);
-        setPaymentSuccess(false);
-      }}
-    >
-      <CreditCard size={15} />
-      {t.courses.payNow}
-    </button>
-  )}
-</div>
+                          {inCart && (
+                            <button
+                              className="btn-primary btn-pay-now"
+                              onClick={() => setCartOpen(true)}
+                            >
+                              <CreditCard size={15} />
+                              {t.courses.payNow}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
