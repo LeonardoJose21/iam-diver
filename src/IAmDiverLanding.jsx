@@ -29,32 +29,32 @@ const NAV_LINKS = [
 const GALLERY = [
   {
     id: 'paisaje',
-    src: '/hero/hero.png',
+    src: '/images/hero/hero.png',
     alt: 'Montañas y niebla al atardecer en Jardín, Antioquia',
     caption: 'Niebla sobre la cordillera',
     tall: true,
   },
   {
     id: 'pueblo',
-    src: '/gallery/pueblo.png',
+    src: '/images/gallery/pueblo.png',
     alt: 'Calles y balcones coloridos del pueblo de Jardín',
     caption: 'Calles y balcones del pueblo',
   },
   {
     id: 'colibri',
-    src: '/gallery/colibri.png',
+    src: '/images/gallery/colibri.png',
     alt: 'Colibrí en el santuario de aves de Jardín',
     caption: 'El santuario de los colibríes',
   },
   {
     id: 'hospedaje',
-    src: '/gallery/hospedaje.png',
+    src: '/images/gallery/hospedaje.png',
     alt: 'Habitación cómoda y luminosa del hospedaje',
     caption: 'Habitaciones cuidadas al detalle',
   },
   {
     id: 'cascada',
-    src: "/gallery/cascada.png",
+    src: "/images/gallery/cascada.png",
     alt: 'Cascada entre la vegetación cerca de Jardín',
     caption: 'Cascadas a minutos del parque',
   },
