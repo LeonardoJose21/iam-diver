@@ -327,6 +327,8 @@ function Hero() {
   );
 }
 
+
+
 /* ────────────────────────────────────────────────────────────────────────
    TRUST STRIP
    ──────────────────────────────────────────────────────────────────────── */
@@ -611,6 +613,21 @@ function Contact() {
    FOOTER
    ──────────────────────────────────────────────────────────────────────── */
 
+function WhatsAppWidget() {
+  return (
+    <a
+      className="wa-widget"
+      href={WHATSAPP_URL}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Escríbenos por WhatsApp"
+    >
+      <Icon name="whatsapp" />
+      <span className="wa-widget__ping" aria-hidden="true" />
+    </a>
+  );
+}
+
 function Footer() {
   return (
     <footer className="site-footer">
@@ -673,6 +690,7 @@ export default function IAmDiverLanding() {
         <Services />
         <Testimonials />
         <Contact />
+        <WhatsAppWidget />
       </main>
       <Footer />
     </div>
