@@ -29,32 +29,32 @@ const NAV_LINKS = [
 const GALLERY = [
   {
     id: 'paisaje',
-    src: 'https://picsum.photos/seed/jardin-paisaje/1600/1100',
+    src: '/hero/hero.png',
     alt: 'Montañas y niebla al atardecer en Jardín, Antioquia',
     caption: 'Niebla sobre la cordillera',
     tall: true,
   },
   {
     id: 'pueblo',
-    src: 'https://picsum.photos/seed/jardin-pueblo/900/1100',
+    src: '/gallery/pueblo.png',
     alt: 'Calles y balcones coloridos del pueblo de Jardín',
     caption: 'Calles y balcones del pueblo',
   },
   {
     id: 'colibri',
-    src: 'https://picsum.photos/seed/jardin-colibri/900/900',
+    src: '/gallery/colibri.png',
     alt: 'Colibrí en el santuario de aves de Jardín',
     caption: 'El santuario de los colibríes',
   },
   {
     id: 'hospedaje',
-    src: 'https://picsum.photos/seed/jardin-hospedaje/900/900',
+    src: '/gallery/hospedaje.png',
     alt: 'Habitación cómoda y luminosa del hospedaje',
     caption: 'Habitaciones cuidadas al detalle',
   },
   {
     id: 'cascada',
-    src: 'https://picsum.photos/seed/jardin-cascada/900/1100',
+    src: "/gallery/cascada.png",
     alt: 'Cascada entre la vegetación cerca de Jardín',
     caption: 'Cascadas a minutos del parque',
   },
