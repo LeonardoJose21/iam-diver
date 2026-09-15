@@ -1,1101 +1,680 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import {
-  Menu,
-  X,
-  Phone,
-  MapPin,
-  Check,
-  Star,
-  Clock,
-  Globe,
-  ShoppingBag,
-  Plus,
-  Minus,
-  Trash2,
-  MessageCircle,
-  ExternalLink,
-  CreditCard,
-  CalendarCheck,
-  ThumbsUp,
-} from "lucide-react";
-import { DICT, TESTIMONIALS } from "./constants";
+import { useState, useEffect, useRef, useCallback } from 'react';
+import './main.css';
 
-const PHONE_E164 = "573108649516";
-const PHONE_DISPLAY = "+57 310 864 9516";
-const WHATSAPP_BASE = `https://wa.me/${PHONE_E164}`;
-const waLink = (msg) => `${WHATSAPP_BASE}?text=${encodeURIComponent(msg)}`;
-const REVIEWS_LINK = "https://share.google/OJ2SkCewNrHLy2fxU";
-const REVIEWS_COUNT = "+300"; // client-reported count, not scraped
+/* ────────────────────────────────────────────────────────────────────────
+   DATA — swap freely, nothing below depends on external services.
+   ──────────────────────────────────────────────────────────────────────── */
 
-const SERVICE_IMAGES = {
-  "discover-scuba": "/images/services/discover-scuba.png",
-  "discover-snorkel": "/images/services/discover-snorkel.png",
-  "open-water": "/images/services/open-water.png",
-  advanced: "/images/services/advanced.png",
-  "fun-dive": "/images/services/fun-dive.png",
-  efr: "/images/services/efr.png",
-  rescue: "/images/services/rescue.png",
-  divemaster: "/images/services/divemaster.png",
-};
+const PHONE_DISPLAY = '+57 311 348 2238';
+const PHONE_TEL = '+573113482238';
+const WHATSAPP_NUMBER = '573113482238';
+const WHATSAPP_TEXT = encodeURIComponent(
+  'Hola Turistas 👋 Quiero información sobre hospedaje y tours en Jardín.'
+);
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_TEXT}`;
+const MAPS_URL = 'https://maps.app.goo.gl/qf5y6rKn37keWuMVA';
+const ADDRESS = 'Calle 11 # 5 - 73, Jardín, Antioquia, Colombia';
 
-const formatCOP = (n) => `${new Intl.NumberFormat("es-CO").format(n)} COP`;
+const NAV_LINKS = [
+  { href: '#inicio', label: 'Inicio' },
+  { href: '#nosotros', label: 'Nosotros' },
+  { href: '#galeria', label: 'Galería' },
+  { href: '#opiniones', label: 'Opiniones' },
+  { href: '#contacto', label: 'Contacto' },
+];
 
-/* ---------------------------------------------------------------
-   i18n -- Spanish / English / German
-   Every course carries a stable `id` (shared across languages) so
-   the cart survives a language switch.
---------------------------------------------------------------- */
-
-const LANGS = [
+// PLACEHOLDER PHOTOGRAPHY — each seed renders a stable stock photo so the
+// layout previews correctly. Swap every `src` for real photos of Jardín
+// before shipping; the `alt` text already describes the intended subject.
+const GALLERY = [
   {
-    code: "es",
-    label: "ESPAÑOL",
-    flag: (
-      <svg
-        width="18"
-        height="13"
-        viewBox="0 0 640 480"
-        style={{ borderRadius: "2px" }}
-      >
-        <path fill="#c60b1e" d="M0 0h640v480H0z" />
-        <path fill="#ffc400" d="M0 120h640v240H0z" />
-      </svg>
-    ),
+    id: 'paisaje',
+    src: 'https://picsum.photos/seed/jardin-paisaje/1600/1100',
+    alt: 'Montañas y niebla al atardecer en Jardín, Antioquia',
+    caption: 'Niebla sobre la cordillera',
+    tall: true,
   },
   {
-    code: "en",
-    label: "ENGLISH",
-    flag: (
-      <svg
-        width="18"
-        height="13"
-        viewBox="0 0 640 480"
-        style={{ borderRadius: "2px" }}
-      >
-        <path fill="#012169" d="M0 0h640v480H0z" />
-        <path
-          fill="#FFF"
-          d="m75 0 245 180L565 0h75v50L395 240l245 190v50h-75L320 300 75 480H0v-50l245-190L0 50V0h75z"
-        />
-        <path
-          fill="#C8102E"
-          d="m424 261 216 164v25l-228-172h12zm-208 0L0 425v25l228-172h-12zM0 30l216 163h12L0 18V30zm640 0L424 193h-12l228-175V30z"
-        />
-        <path fill="#FFF" d="M240 0h160v480H240zM0 160h640v160H0z" />
-        <path fill="#C8102E" d="M267 0h106v480H267zM0 187h640v106H0z" />
-      </svg>
-    ),
+    id: 'pueblo',
+    src: 'https://picsum.photos/seed/jardin-pueblo/900/1100',
+    alt: 'Calles y balcones coloridos del pueblo de Jardín',
+    caption: 'Calles y balcones del pueblo',
   },
   {
-    code: "de",
-    label: "DEUTSCH",
-    flag: (
-      <svg
-        width="18"
-        height="13"
-        viewBox="0 0 640 480"
-        style={{ borderRadius: "2px" }}
-      >
-        <path fill="#000" d="M0 0h640v160H0z" />
-        <path fill="#DD0000" d="M0 160h640v160H0z" />
-        <path fill="#FFCC00" d="M0 320h640v160H0z" />
-      </svg>
-    ),
+    id: 'colibri',
+    src: 'https://picsum.photos/seed/jardin-colibri/900/900',
+    alt: 'Colibrí en el santuario de aves de Jardín',
+    caption: 'El santuario de los colibríes',
+  },
+  {
+    id: 'hospedaje',
+    src: 'https://picsum.photos/seed/jardin-hospedaje/900/900',
+    alt: 'Habitación cómoda y luminosa del hospedaje',
+    caption: 'Habitaciones cuidadas al detalle',
+  },
+  {
+    id: 'cascada',
+    src: 'https://picsum.photos/seed/jardin-cascada/900/1100',
+    alt: 'Cascada entre la vegetación cerca de Jardín',
+    caption: 'Cascadas a minutos del parque',
   },
 ];
 
-function useRevealOnScroll() {
-  const ref = useRef(null);
-  const [visible, setVisible] = useState(false);
+const SERVICES = [
+  {
+    icon: 'house',
+    title: 'Hospedaje',
+    text: 'Habitaciones limpias, cómodas y bien ubicadas, a pocos pasos del parque principal.',
+  },
+  {
+    icon: 'compass',
+    title: 'Tours y alrededores',
+    text: 'Cascadas, miradores y senderos que hacen famoso a Jardín — con precios claros desde el primer momento.',
+  },
+  {
+    icon: 'heart',
+    title: 'Atención cercana',
+    text: 'Te acompañamos desde que llegas hasta que te vas, como en casa.',
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    name: 'Martí Valerio',
+    tag: 'Reseña en Google',
+    lang: 'ES',
+    text: 'Lugar perfecto para pasar unos días en el hermoso pueblo de Jardín. Tiene todo lo necesario y el precio es muy asequible. Todo está muy limpio y la cocina es perfecta. La atención también nos pareció muy amigable, así que lo recomendamos al 100%.',
+  },
+  {
+    name: 'Maria Jose',
+    tag: 'Reseña en Google',
+    lang: 'EN',
+    text: 'Super good place, very close to the park where you can eat and have coffee. The owner is kind and helpful, the environment is comfortable, and it has a kitchen — everything clean and organized. I totally recommend it.',
+  },
+  {
+    name: 'Jorge Alberto Díaz Alzate',
+    tag: 'Reseña en Google',
+    lang: 'ES',
+    text: 'La habitación es muy confortable y organizada, y la ubicación está muy cerca del parque. Nuestra única observación es sobre el tour turístico: el precio no fue del todo claro frente a lo habitual en el pueblo. Es algo que vale la pena seguir mejorando.',
+  },
+];
+
+/* ────────────────────────────────────────────────────────────────────────
+   HOOKS
+   ──────────────────────────────────────────────────────────────────────── */
+
+function useScrolled(offset = 12) {
+  const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          obs.disconnect();
-        }
-      },
-      { threshold: 0.15 },
-    );
-    obs.observe(node);
-    return () => obs.disconnect();
-  }, []);
-  return [ref, visible];
+    const onScroll = () => setScrolled(window.scrollY > offset);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [offset]);
+  return scrolled;
 }
 
-function Reveal({
-  children,
-  className = "",
-  as: Tag = "div",
-  delay = 0,
-  style = {},
-}) {
-  const [ref, visible] = useRevealOnScroll();
+function useInView(threshold = 0.2) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return undefined;
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return undefined;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.unobserve(node);
+        }
+      },
+      { threshold, rootMargin: '0px 0px -64px 0px' }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [threshold]);
+  return [ref, inView];
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   SMALL PRIMITIVES
+   ──────────────────────────────────────────────────────────────────────── */
+
+function Reveal({ as: Tag = 'div', className = '', delay = 0, children }) {
+  const [ref, inView] = useInView();
   return (
     <Tag
       ref={ref}
-      className={`reveal ${visible ? "reveal-visible" : ""} ${className}`}
-      style={{ ...style, transitionDelay: visible ? `${delay}ms` : "0ms" }}
+      className={`reveal${inView ? ' reveal--visible' : ''}${className ? ` ${className}` : ''}`}
+      style={inView ? { transitionDelay: `${delay}ms` } : undefined}
     >
       {children}
     </Tag>
   );
 }
 
-function BrandMark({ size = 40 }) {
+function Stars({ value = 5 }) {
+  return (
+    <span className="stars" aria-hidden="true">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <svg key={i} viewBox="0 0 20 20" className={i < value ? 'star star--on' : 'star'}>
+          <path d="M10 1.6l2.47 5.24 5.72.6-4.3 3.93 1.2 5.7L10 14.9l-5.09 2.17 1.2-5.7-4.3-3.93 5.72-.6L10 1.6z" />
+        </svg>
+      ))}
+    </span>
+  );
+}
+
+/* Minimal hand-drawn line icons — no icon library required. */
+const ICONS = {
+  house: 'M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5M9.5 20v-6h5v6',
+  compass: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z|M14.5 9.5 13 13l-3.5 1.5L11 11l3.5-1.5Z',
+  heart: 'M12 20.2s-7.6-4.4-7.6-10A4.4 4.4 0 0 1 12 7.1a4.4 4.4 0 0 1 7.6 3.1c0 5.6-7.6 10-7.6 10Z',
+  pin: 'M12 21s7-6.1 7-11.6A7 7 0 0 0 5 9.4C5 14.9 12 21 12 21Z|M12 12.2a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z',
+  phone: 'M6.6 3.5 9.2 8l-1.9 2A13 13 0 0 0 13.9 16l2-1.9 4.5 2.6-.8 3.3a2 2 0 0 1-2.2 1.5A17.3 17.3 0 0 1 3.5 6.3a2 2 0 0 1 1.5-2.2l1.6-.6Z',
+  whatsapp:
+    'M17 13.6c-.3-.1-1.6-.8-1.8-.9-.2-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.2.2-.3.2-.5.1-.3-.1-1.2-.4-2.2-1.4-.8-.7-1.4-1.6-1.5-1.9-.2-.3 0-.4.1-.6l.4-.5c.1-.1.2-.3.2-.4.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-1 1-1 2.4s1 2.8 1.2 3c.1.2 2 3 4.8 4.3.7.3 1.2.5 1.6.6.7.2 1.3.2 1.8.1.5-.1 1.6-.6 1.8-1.3.2-.6.2-1.1.2-1.2 0-.1-.2-.2-.5-.3Z|M12 3.5a8.5 8.5 0 0 0-7.3 12.8L3.5 20.5l4.3-1.1A8.5 8.5 0 1 0 12 3.5Z',
+  copy: 'M8 8h11v11H8z|M5 5h11v3h-8v8H5z',
+  check: 'M4 12.5 9 17l11-11',
+  close: 'M5 5l14 14M19 5 5 19',
+  menu: 'M4 7h16M4 12h16M4 17h16',
+  chevronLeft: 'M14.5 5 8 12l6.5 7',
+  chevronRight: 'M9.5 5 16 12l-6.5 7',
+  bird: 'M2 9.5c2-2 4-1.4 5.4.2C9 8 11 7.6 12.6 8.9c1.6-1.6 3.6-1.2 5 .4-2 .1-3.4 1-4.5 2.3-1.6-.7-3.3-.6-4.7.2C7.2 10.3 5 9.4 2 9.5Z',
+};
+
+function Icon({ name, className = '' }) {
+  const d = ICONS[name] || '';
+  const paths = d.split('|');
+  const filled = name === 'heart' || name === 'pin' || name === 'whatsapp' || name === 'bird';
   return (
     <svg
-      viewBox="0 0 200 200"
-      width={size}
-      height={size}
-      role="img"
-      aria-label="I Am Diver logo"
+      viewBox="0 0 24 24"
+      className={`icon icon--${name}${className ? ` ${className}` : ''}`}
+      fill={filled ? 'currentColor' : 'none'}
+      stroke={filled ? 'none' : 'currentColor'}
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <circle
-        cx="100"
-        cy="100"
-        r="96"
-        fill="#222831"
-        stroke="#EEEEEE"
-        strokeWidth="4"
-      />
-      <text
-        x="52"
-        y="72"
-        fontFamily="Georgia, 'Times New Roman', serif"
-        fontStyle="italic"
-        fontSize="26"
-        fill="#EEEEEE"
-      >
-        I am
-      </text>
-      <text
-        x="42"
-        y="128"
-        fontFamily="'Big Shoulders Display', Arial, sans-serif"
-        fontWeight="800"
-        fontSize="46"
-        fill="#EEEEEE"
-        letterSpacing="-1"
-      >
-        D
-      </text>
-      <text
-        x="118"
-        y="128"
-        fontFamily="'Big Shoulders Display', Arial, sans-serif"
-        fontWeight="800"
-        fontSize="46"
-        fill="#EEEEEE"
-        letterSpacing="-1"
-      >
-        VER
-      </text>
-      <g transform="translate(93,84)">
-        <circle cx="8" cy="0" r="6" fill="#00ADB5" />
-        <path
-          d="M8 7 C-2 14 -4 28 2 40 C5 46 10 50 8 58"
-          stroke="#00ADB5"
-          strokeWidth="4.5"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <path
-          d="M4 16 C-6 14 -12 8 -13 0"
-          stroke="#00ADB5"
-          strokeWidth="4"
-          fill="none"
-          strokeLinecap="round"
-        />
-        <path
-          d="M12 16 C20 20 22 30 19 38"
-          stroke="#00ADB5"
-          strokeWidth="4"
-          fill="none"
-          strokeLinecap="round"
-        />
-      </g>
-      <text
-        x="100"
-        y="158"
-        textAnchor="middle"
-        fontFamily="Arial, sans-serif"
-        fontWeight="600"
-        fontSize="11"
-        letterSpacing="1.5"
-        fill="#EEEEEE"
-      >
-        CENTRO DE BUCEO
-      </text>
-      <text
-        x="100"
-        y="172"
-        textAnchor="middle"
-        fontFamily="Arial, sans-serif"
-        fontWeight="600"
-        fontSize="11"
-        letterSpacing="1.5"
-        fill="#00ADB5"
-      >
-        TAGANGA
-      </text>
+      {paths.map((p, i) => (
+        <path key={i} d={p} />
+      ))}
     </svg>
   );
 }
 
-export default function IAmDiverLanding() {
-  const [lang, setLang] = useState("es");
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [openFaq, setOpenFaq] = useState(0);
-  const [openCourse, setOpenCourse] = useState(2);
-  const [scrolled, setScrolled] = useState(false);
-  const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [cart, setCart] = useState({}); // { [courseId]: qty }
-  const [cartOpen, setCartOpen] = useState(false);
-  const [waWidgetOpen, setWaWidgetOpen] = useState(false);
-  const t = DICT[lang];
+/* ────────────────────────────────────────────────────────────────────────
+   HEADER
+   ──────────────────────────────────────────────────────────────────────── */
+
+function Header() {
+  const scrolled = useScrolled();
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
-  const cartCount = useMemo(
-    () => Object.values(cart).reduce((a, b) => a + b, 0),
-    [cart],
-  );
-
-  const cartItems = useMemo(
-    () =>
-      Object.entries(cart)
-        .filter(([, qty]) => qty > 0)
-        .map(([id, qty]) => ({
-          ...t.courses.list.find((c) => c.id === id),
-          qty,
-        }))
-        .filter((c) => c.id),
-    [cart, t],
-  );
-
-  const cartTotal = useMemo(
-    () => cartItems.reduce((sum, c) => sum + c.priceCOP * c.qty, 0),
-    [cartItems],
-  );
-
-  const addToCart = (id) =>
-    setCart((prev) => ({ ...prev, [id]: (prev[id] || 0) + 1 }));
-  const decCart = (id) =>
-    setCart((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] || 0) - 1) }));
-  const removeFromCart = (id) =>
-    setCart((prev) => {
-      const n = { ...prev };
-      delete n[id];
-      return n;
-    });
-
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [paymentSuccess, setPaymentSuccess] = useState(false);
-
-  const startCheckout = () => {
-    if (cartItems.length === 0) return;
-    setCartOpen(false);
-    setCheckoutOpen(true);
-    setPaymentSuccess(false);
-  };
-
-  const simulatePayment = () => {
-    // SIMULACIÓN TEMPORAL DEL GATEWAY.
-    // Cuando conectes Wompi/ePayco/Stripe, reemplaza esta función.
-    setPaymentSuccess(true);
-  };
-
-  const closeCheckout = () => {
-    setCheckoutOpen(false);
-    setPaymentSuccess(false);
-  };
-
-  const handleCtaClick = () => {
-    if (cartItems.length > 0) {
-      startCheckout();
-    } else {
-      document
-        .getElementById("courses")
-        ?.scrollIntoView({ behavior: "smooth" });
-    }
-  };
+  const handleNavClick = useCallback(() => setOpen(false), []);
 
   return (
-    <div className="iad-root" lang={lang}>
-      {/* ---------------- NAV ---------------- */}
-      <header className={`iad-nav ${scrolled || menuOpen ? "scrolled" : ""}`}>
-        <div className="iad-nav-inner">
-          <a href="#top" className="iad-logo">
-            <BrandMark size={38} />I Am Diver
+    <header className={`site-header${scrolled ? ' site-header--solid' : ''}`}>
+      <div className="site-header__bar">
+        <a href="#inicio" className="wordmark" onClick={handleNavClick}>
+          <span className="wordmark__t1">T</span>
+          <span className="wordmark__t2">u</span>
+          <span className="wordmark__t3">r</span>
+          <span className="wordmark__t4">i</span>
+          <span className="wordmark__t5">s</span>
+          <span className="wordmark__t1">t</span>
+          <span className="wordmark__t2">a</span>
+          <span className="wordmark__t3">s</span>
+          <span className="wordmark__sub">Jardín · Antioquia</span>
+        </a>
+
+        <nav className="site-nav" aria-label="Navegación principal">
+          {NAV_LINKS.map((link) => (
+            <a key={link.href} href={link.href}>
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="site-header__actions">
+          <a className="btn btn--ghost" href={`tel:${PHONE_TEL}`}>
+            <Icon name="phone" /> Llamar
           </a>
-          <nav className="iad-nav-links">
-            <a href="#courses">{t.nav.courses}</a>
-            <a href="#about">{t.nav.about}</a>
-            <a href="#why">{t.nav.why}</a>
-            <a href="#reviews">{t.nav.reviews}</a>
-          </nav>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div className="lang-switch">
-              <button
-                className="lang-btn"
-                onClick={() => setLangMenuOpen((v) => !v)}
-                aria-haspopup="true"
-                aria-expanded={langMenuOpen}
-              >
-                <span style={{ display: "inline-flex", alignItems: "center" }}>
-                  {LANGS.find((l) => l.code === lang)?.flag}
-                </span>
-                {lang.toUpperCase()}
-              </button>
-              {langMenuOpen && (
-                <div className="lang-menu">
-                  {LANGS.map((l) => (
-                    <button
-                      key={l.code}
-                      className={lang === l.code ? "active" : ""}
-                      onClick={() => {
-                        setLang(l.code);
-                        setLangMenuOpen(false);
-                      }}
-                    >
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          marginRight: "8px",
-                        }}
-                      >
-                        {l.flag}
-                      </span>
-                      {l.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button
-              className="iad-cart-btn"
-              onClick={() => setCartOpen(true)}
-              aria-label={`${t.cart.viewCart} (${cartCount})`}
-            >
-              <ShoppingBag size={17} />
-              {cartCount > 0 && (
-                <span className="iad-cart-badge">{cartCount}</span>
-              )}
-            </button>
-            <button
-              className="iad-nav-cta iad-nav-cta-desktop"
-              onClick={handleCtaClick}
-            >
-              {t.hero.ctaPrimary}
-            </button>
-            <button
-              className="iad-menu-btn"
-              aria-label={menuOpen ? "Close menu" : "Open menu"}
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              {menuOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
-        </div>
-        {menuOpen && (
-          <div className="iad-mobile-menu">
-            <a href="#courses" onClick={() => setMenuOpen(false)}>
-              {t.nav.courses}
-            </a>
-            <a href="#about" onClick={() => setMenuOpen(false)}>
-              {t.nav.about}
-            </a>
-            <a href="#why" onClick={() => setMenuOpen(false)}>
-              {t.nav.why}
-            </a>
-            <a href="#reviews" onClick={() => setMenuOpen(false)}>
-              {t.nav.reviews}
-            </a>
-            <a href="#faq" onClick={() => setMenuOpen(false)}>
-              {t.nav.faq}
-            </a>
-            <button
-              className="btn-primary iad-mobile-menu-cta"
-              style={{
-                width: "100%",
-                justifyContent: "center",
-                marginTop: "12px",
-              }}
-              onClick={() => {
-                setMenuOpen(false);
-                handleCtaClick();
-              }}
-            >
-              <CalendarCheck size={17} />
-              {t.hero.ctaPrimary}
-            </button>
-          </div>
-        )}
-      </header>
-
-      {/* ---------------- HERO ---------------- */}
-      <section id="top" className="iad-hero">
-        <div className="iad-container iad-hero-grid">
-          <div>
-            <span className="iad-eyebrow">
-              <span className="dot" />
-              {t.hero.eyebrow}
-            </span>
-            <h1 className="iad-h1">{t.hero.h1}</h1>
-            <p className="iad-hero-sub">{t.hero.sub}</p>
-            <div className="iad-cta-row">
-              <button
-                className="btn-primary"
-                onClick={() => {
-                  document
-                    .getElementById("courses")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }}
-              >
-                <CalendarCheck size={17} />
-                {t.hero.ctaPrimary}
-              </button>
-              <a className="btn-secondary" href="#courses">
-                {t.hero.ctaSecondary}
-              </a>
-            </div>
-            <div className="iad-trust-bar">
-              <div className="iad-trust-item">
-                <Check size={16} />
-                {t.hero.trust1}
-              </div>
-              <div className="iad-trust-item">
-                <Check size={16} />
-                {t.hero.trust2}
-              </div>
-              <div className="iad-trust-item">
-                <Check size={16} />
-                {t.hero.trust3}
-              </div>
-            </div>
-          </div>
-          <Reveal className="hero-photo-wrap" delay={80}>
-            <img
-              src="/images/hero/hero.jpg"
-              alt="Scuba diver over a Caribbean coral reef"
-              loading="lazy"
-            />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ---------------- TRUST STRIP ---------------- */}
-      <div className="trust-strip">
-        <div className="trust-strip-inner">
-          <div className="trust-item">
-            <div className="trust-badge">PADI</div>
-            <div className="trust-text">
-              <span className="num">{t.trust.padi}</span>
-            </div>
-          </div>
-          <a
-            className="trust-item"
-            href={REVIEWS_LINK}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div className="trust-badge">
-              <Star size={16} fill="currentColor" strokeWidth={0} />
-            </div>
-            <div className="trust-text">
-              <span className="num">{t.trust.rating}</span>
-              <span className="lbl">{t.trust.ratingLbl}</span>
-            </div>
+          <a className="btn btn--primary" href={WHATSAPP_URL} target="_blank" rel="noreferrer">
+            <Icon name="whatsapp" /> WhatsApp
           </a>
-          <div className="trust-item">
-            <div className="trust-badge">
-              <ThumbsUp size={16} fill="currentColor" strokeWidth={0} />
-            </div>
-            <div className="trust-text">
-              <span className="num">{t.trust.instructor}</span>
-              <span className="lbl">{t.trust.instructorLbl}</span>
-            </div>
-          </div>
         </div>
-      </div>
 
-      {/* ---------------- WHY ---------------- */}
-      <section id="why">
-        <div className="iad-container">
-          <Reveal>
-            <p className="iad-kicker">{t.why.kicker}</p>
-            <h2 className="iad-h2">{t.why.h2}</h2>
-            <p className="iad-h2-sub">{t.why.sub}</p>
-          </Reveal>
-
-          <div className="why-layout">
-            {/* IMAGE */}
-            <Reveal className="why-image-wrap">
-              <div className="why-image">
-                <img
-                  src="/images/why/why.jpg"
-                  alt="Diver underwater in Taganga"
-                />
-              </div>
-            </Reveal>
-
-            {/* REASONS */}
-            <div className="gauge-scale">
-              {t.why.cards.map((c, i) => (
-                <Reveal key={c.title} delay={i * 60} className="gauge-row">
-                  <div className="gauge-tick">
-                    <span className="gauge-tick-mark" />
-                    <span className="gauge-tick-num iad-mono">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                  </div>
-
-                  <div>
-                    <h3>{c.title}</h3>
-                    <p>{c.body}</p>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-
-          <Reveal delay={100}>
-            <p className="iad-kicker" style={{ marginTop: 44 }}>
-              {t.why.marineKicker}
-            </p>
-
-            <div className="iad-chip-row">
-              {t.why.marine.map((m) => (
-                <span key={m} className="iad-chip">
-                  {m}
-                </span>
-              ))}
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ---------------- COURSES ---------------- */}
-      <section id="courses" className="iad-courses-bg">
-        <div className="iad-container">
-          <Reveal>
-            <p className="iad-kicker">{t.courses.kicker}</p>
-            <h2 className="iad-h2">{t.courses.h2}</h2>
-            <p className="iad-h2-sub">{t.courses.sub}</p>
-          </Reveal>
-          <div className="manifest-list">
-            {t.courses.list.map((c, i) => {
-              const inCart = (cart[c.id] || 0) > 0;
-              return (
-                <Reveal
-                  key={c.id}
-                  delay={i * 30}
-                  as="div"
-                  className={`manifest-row ${openCourse === i ? "open" : ""}`}
-                >
-                  <button
-                    className="manifest-head"
-                    onClick={() => setOpenCourse(openCourse === i ? -1 : i)}
-                    aria-expanded={openCourse === i}
-                  >
-                    <span className="manifest-idx">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <span className="manifest-name-wrap">
-                      <h3 className="manifest-name">{c.name}</h3>
-                      <span className="manifest-tag">{c.tag}</span>
-                    </span>
-                    <span className="manifest-duration">
-                      <Clock size={13} />
-                      {c.duration}
-                    </span>
-                    <span className="manifest-price">
-                      {formatCOP(c.priceCOP)}
-                    </span>
-                  </button>
-                  <div className="manifest-body-content">
-                    <div className="service-detail-grid">
-                      <div className="service-image-wrap">
-                        <img
-                          src={SERVICE_IMAGES[c.id]}
-                          alt={c.name}
-                          className="service-image"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                            e.currentTarget.parentElement.classList.add(
-                              "placeholder",
-                            );
-                          }}
-                        />
-                        <div className="service-image-placeholder">
-                          <span>IMAGE</span>
-                          <small>{c.name}</small>
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="manifest-blurb">{c.blurb}</p>
-
-                        <ul className="manifest-bullets">
-                          {c.bullets.map((b) => (
-                            <li key={b}>
-                              <Check size={14} />
-                              {b}
-                            </li>
-                          ))}
-                        </ul>
-
-                        <div className="service-action-row">
-                          <button
-                            className={`manifest-add ${inCart ? "added" : ""}`}
-                            onClick={() => addToCart(c.id)}
-                          >
-                            <ShoppingBag size={15} />
-                            {inCart
-                              ? `${t.courses.addedBtn} (${cart[c.id]})`
-                              : t.courses.addBtn}
-                          </button>
-
-                          {inCart && (
-                            <button
-                              className="btn-primary btn-pay-now"
-                              onClick={() => setCartOpen(true)}
-                            >
-                              <CreditCard size={15} />
-                              {t.courses.payNow}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Reveal>
-              );
-            })}
-          </div>
-          <p className="iad-price-note">{t.courses.priceNote}</p>
-        </div>
-      </section>
-
-      {/* ---------------- REVIEWS ---------------- */}
-      <section id="reviews">
-        <div className="iad-container">
-          <Reveal style={{ textAlign: "center" }}>
-            <p className="iad-kicker" style={{ textAlign: "center" }}>
-              {t.reviews.kicker}
-            </p>
-            <h2
-              className="iad-h2"
-              style={{
-                maxWidth: "none",
-                textAlign: "center",
-                margin: "0 auto 14px",
-              }}
-            >
-              {t.reviews.h2}
-            </h2>
-          </Reveal>
-          <div className="testimonial-grid">
-            {TESTIMONIALS.map((review, i) => (
-              <Reveal
-                key={review.name}
-                className="testimonial-card"
-                delay={i * 40}
-              >
-                <div className="testimonial-stars">
-                  {Array.from({ length: 5 }).map((_, s) => (
-                    <Star
-                      key={s}
-                      size={15}
-                      fill="currentColor"
-                      strokeWidth={0}
-                    />
-                  ))}
-                </div>
-
-                <p className="testimonial-text">“{review.text}”</p>
-
-                <div className="testimonial-author">
-                  <div className="testimonial-avatar">
-                    {review.photo ? (
-                      <img src={review.photo} alt={review.name} />
-                    ) : (
-                      <span className="testimonial-avatar-initial">
-                        {review.name.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <strong>{review.name}</strong>
-                    <a
-                      className="testimonial-google-link"
-                      href={review.googleUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View on Google <ExternalLink size={11} />
-                    </a>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-
-          <div className="reviews-google-cta">
-            <p>{REVIEWS_COUNT} reseñas de clientes en Google</p>
-
-            <a
-              className="reviews-link-btn"
-              href={REVIEWS_LINK}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t.reviews.ctaBtn}
-              <ExternalLink size={15} />
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------- ABOUT ---------------- */}
-      <section id="about">
-        <div className="iad-container about-grid">
-          <Reveal>
-            <p className="iad-kicker">{t.about.kicker}</p>
-            <h2 className="iad-h2" style={{ maxWidth: "none" }}>
-              {t.about.h2}
-            </h2>
-            <p className="about-body">{t.about.body}</p>
-            <div className="about-included">{t.about.included}</div>
-          </Reveal>
-        </div>
-      </section>
-
-      {/* ---------------- CONTACT ---------------- */}
-      <section id="contact" className="iad-contact-bg">
-        <div className="iad-container iad-contact-grid">
-          <div>
-            <p className="iad-kicker on-dark">{t.contact.kicker}</p>
-            <h2 className="iad-h2">{t.contact.h2}</h2>
-            <p className="iad-h2-sub on-dark">{t.contact.sub}</p>
-            <div className="iad-contact-list">
-              <div className="iad-contact-row">
-                <MapPin size={18} />
-                <div>
-                  <div className="label">{t.contact.addressLabel}</div>
-                  <div className="value">
-                    Cra 1 Calle 17-1, Local 5, Taganga, Santa Marta, Magdalena,
-                    Colombia
-                  </div>
-                </div>
-              </div>
-              <div className="iad-contact-row">
-                <Phone size={18} />
-                <div>
-                  <div className="label">{t.contact.phoneLabel}</div>
-                  <div className="value">{PHONE_DISPLAY}</div>
-                </div>
-              </div>
-            </div>
-            <a
-              className="btn-primary"
-              style={{ marginTop: 28 }}
-              href={waLink(t.contact.ctaBtn)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {t.contact.ctaBtn}
-            </a>
-          </div>
-          <div className="iad-map-wrap">
-            <iframe
-              title="I Am Diver location in Taganga"
-              loading="lazy"
-              src="https://www.openstreetmap.org/export/embed.html?bbox=-74.196%2C11.263%2C-74.186%2C11.271&layer=mapnik&marker=11.267%2C-74.191"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ---------------- FOOTER ---------------- */}
-      <footer className="iad-footer">
-        <span>
-          © {new Date().getFullYear()} I Am Diver, Taganga. {t.footer.rights}
-        </span>
-        <span>{t.footer.tag}</span>
-      </footer>
-
-      {/* ---------------- FLOATING WHATSAPP WIDGET ---------------- */}
-      <div className="wa-widget">
-        {waWidgetOpen && (
-          <div className="wa-panel">
-            <p>{t.whatsappWidget.greeting}</p>
-            <a
-              href={waLink(t.whatsappWidget.greeting)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <MessageCircle size={16} />
-              {t.whatsappWidget.cta}
-            </a>
-          </div>
-        )}
         <button
-          className="wa-bubble"
-          onClick={() => setWaWidgetOpen((v) => !v)}
-          aria-label={t.whatsappWidget.cta}
+          className="menu-toggle"
+          aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
         >
-          {waWidgetOpen ? (
-            <X size={26} />
-          ) : (
-            <MessageCircle size={26} fill="currentColor" strokeWidth={0} />
-          )}
+          <Icon name={open ? 'close' : 'menu'} />
         </button>
       </div>
 
-      {/* ---------------- CART DRAWER ---------------- */}
-      {cartOpen && (
-        <>
-          <div className="cart-overlay" onClick={() => setCartOpen(false)} />
-          <div className="cart-drawer">
-            <div className="cart-head">
-              <h3>{t.cart.title}</h3>
-              <button
-                className="cart-close"
-                onClick={() => setCartOpen(false)}
-                aria-label={t.cart.close}
-              >
-                <X size={22} />
-              </button>
-            </div>
-            <div className="cart-body">
-              {cartItems.length === 0 ? (
-                <p className="cart-empty">{t.cart.empty}</p>
-              ) : (
-                cartItems.map((c) => (
-                  <div className="cart-line" key={c.id}>
-                    <div style={{ flex: 1 }}>
-                      <p className="cart-line-name">{c.name}</p>
-                      <span className="cart-line-price">
-                        {formatCOP(c.priceCOP)}
-                      </span>
-                      <div className="cart-qty">
-                        <button onClick={() => decCart(c.id)} aria-label="-">
-                          <Minus size={13} />
-                        </button>
-                        <span>{c.qty}</span>
-                        <button onClick={() => addToCart(c.id)} aria-label="+">
-                          <Plus size={13} />
-                        </button>
-                      </div>
-                    </div>
-                    <button
-                      className="cart-line-remove"
-                      onClick={() => removeFromCart(c.id)}
-                      aria-label={t.cart.remove}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                    <span className="cart-line-sub">
-                      {formatCOP(c.priceCOP * c.qty)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-            {cartItems.length > 0 && (
-              <div className="cart-foot">
-                <div className="cart-total-row">
-                  <span className="lbl">{t.cart.total}</span>
-                  <span className="val">{formatCOP(cartTotal)}</span>
-                </div>
-                <button
-                  className="btn-primary"
-                  style={{ width: "100%", justifyContent: "center" }}
-                  onClick={startCheckout}
-                >
-                  <CreditCard size={17} />
-                  {t.cart.checkout}
-                </button>
+      <div className={`mobile-nav${open ? ' mobile-nav--open' : ''}`}>
+        <nav aria-label="Navegación móvil">
+          {NAV_LINKS.map((link) => (
+            <a key={link.href} href={link.href} onClick={handleNavClick}>
+              {link.label}
+            </a>
+          ))}
+        </nav>
+        <a className="btn btn--primary btn--block" href={WHATSAPP_URL} target="_blank" rel="noreferrer">
+          <Icon name="whatsapp" /> Escríbenos por WhatsApp
+        </a>
+      </div>
+    </header>
+  );
+}
 
-                <p className="cart-note">{t.cart.note}</p>
-                <p className="cart-note">{t.cart.note}</p>
-              </div>
-            )}
-          </div>
-        </>
+/* ────────────────────────────────────────────────────────────────────────
+   HERO
+   ──────────────────────────────────────────────────────────────────────── */
+
+function Hero() {
+  return (
+    <section id="inicio" className="hero">
+      <div className="hero__media" aria-hidden="true">
+        <img src={GALLERY[0].src} alt="" />
+        <div className="hero__sun" />
+        <Icon name="bird" className="hero__bird hero__bird--1" />
+        <Icon name="bird" className="hero__bird hero__bird--2" />
+        <Icon name="bird" className="hero__bird hero__bird--3" />
+        <div className="hero__scrim" />
+      </div>
+
+      <div className="hero__content">
+        <p className="eyebrow eyebrow--light">Jardín · Antioquia · Colombia</p>
+        <h1 className="hero__title">
+          Tu refugio entre montañas,
+          <br />
+          en el pueblo más colorido de Colombia.
+        </h1>
+        <p className="hero__subtitle">
+          Hospedaje cómodo y tours locales en Jardín, pensados para que solo te preocupes
+          por disfrutar.
+        </p>
+        <div className="hero__actions">
+          <a className="btn btn--primary btn--lg" href={WHATSAPP_URL} target="_blank" rel="noreferrer">
+            <Icon name="whatsapp" /> Escríbenos por WhatsApp
+          </a>
+          <a className="btn btn--outline btn--lg" href="#galeria">
+            Ver la galería
+          </a>
+        </div>
+      </div>
+
+      <a className="scroll-cue" href="#nosotros" aria-label="Ir a la siguiente sección">
+        <span />
+      </a>
+    </section>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   TRUST STRIP
+   ──────────────────────────────────────────────────────────────────────── */
+
+function TrustStrip() {
+  return (
+    <section className="trust-strip">
+      <Reveal className="trust-strip__inner">
+        <a
+          className="trust-rating"
+          href={MAPS_URL}
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Ver reseñas en Google Maps"
+        >
+          <span className="trust-rating__score">4.8</span>
+          <span className="trust-rating__meta">
+            <Stars value={5} />
+            <span>10 reseñas en Google</span>
+          </span>
+        </a>
+
+        <div className="trust-strip__divider" aria-hidden="true" />
+
+        <div className="trust-badges">
+          <span className="badge">RNT 86908</span>
+          <span className="badge">RNT 87117</span>
+        </div>
+
+        <div className="trust-strip__divider" aria-hidden="true" />
+
+        <span className="trust-strip__address">
+          <Icon name="pin" /> {ADDRESS}
+        </span>
+      </Reveal>
+    </section>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   ABOUT
+   ──────────────────────────────────────────────────────────────────────── */
+
+function About() {
+  return (
+    <section id="nosotros" className="about">
+      <div className="about__grid">
+        <Reveal className="about__text">
+          <p className="eyebrow">Sobre Turistas</p>
+          <h2>Hospitalidad de pueblo, organización de agencia.</h2>
+          <p>
+            Turistas es una agencia de turismo y hospedaje en el corazón de Jardín, Antioquia.
+            Ayudamos a quienes nos visitan a encontrar un lugar cómodo y limpio para quedarse,
+            y los conectamos con los mejores rincones del pueblo y sus alrededores — con
+            precios claros, antes de reservar.
+          </p>
+          <ul className="about__list">
+            <li>
+              <Icon name="check" /> A pocos minutos del parque principal
+            </li>
+            <li>
+              <Icon name="check" /> Habitaciones limpias y bien equipadas
+            </li>
+            <li>
+              <Icon name="check" /> Tours con precios definidos de antemano
+            </li>
+          </ul>
+        </Reveal>
+
+        <Reveal className="about__media" delay={120}>
+          <img src={GALLERY[3].src} alt={GALLERY[3].alt} loading="lazy" />
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   GALLERY + LIGHTBOX
+   ──────────────────────────────────────────────────────────────────────── */
+
+function Lightbox({ index, onClose, onPrev, onNext }) {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowLeft') onPrev();
+      if (e.key === 'ArrowRight') onNext();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, onPrev, onNext]);
+
+  const item = GALLERY[index];
+
+  return (
+    <div className="lightbox" role="dialog" aria-modal="true" aria-label={item.caption}>
+      <button className="lightbox__backdrop" onClick={onClose} aria-label="Cerrar" />
+      <div className="lightbox__body">
+        <img src={item.src} alt={item.alt} />
+        <p className="lightbox__caption">{item.caption}</p>
+        <button className="lightbox__close" onClick={onClose} aria-label="Cerrar">
+          <Icon name="close" />
+        </button>
+        <button className="lightbox__nav lightbox__nav--prev" onClick={onPrev} aria-label="Anterior">
+          <Icon name="chevronLeft" />
+        </button>
+        <button className="lightbox__nav lightbox__nav--next" onClick={onNext} aria-label="Siguiente">
+          <Icon name="chevronRight" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Gallery() {
+  const [active, setActive] = useState(null);
+
+  const prev = useCallback(
+    () => setActive((i) => (i === null ? null : (i + GALLERY.length - 1) % GALLERY.length)),
+    []
+  );
+  const next = useCallback(() => setActive((i) => (i === null ? null : (i + 1) % GALLERY.length)), []);
+
+  return (
+    <section id="galeria" className="gallery">
+      <Reveal className="section-head">
+        <p className="eyebrow">Galería</p>
+        <h2>Así se ve Jardín</h2>
+      </Reveal>
+
+      <div className="gallery__grid">
+        {GALLERY.map((item, i) => (
+          <Reveal
+            key={item.id}
+            as="button"
+            delay={i * 60}
+            className={`gallery__tile${item.tall ? ' gallery__tile--wide' : ''}`}
+          >
+            <span className="gallery__btn" onClick={() => setActive(i)}>
+              <img src={item.src} alt={item.alt} loading="lazy" />
+              <span className="gallery__caption">{item.caption}</span>
+            </span>
+          </Reveal>
+        ))}
+      </div>
+
+      {active !== null && (
+        <Lightbox index={active} onClose={() => setActive(null)} onPrev={prev} onNext={next} />
       )}
+    </section>
+  );
+}
 
-      {/* ---------------- SIMULATED PAYMENT GATEWAY ---------------- */}
-      {checkoutOpen && (
-        <>
-          <div className="checkout-overlay" onClick={closeCheckout} />
+/* ────────────────────────────────────────────────────────────────────────
+   SERVICES
+   ──────────────────────────────────────────────────────────────────────── */
 
-          <div className="checkout-modal">
-            <div className="checkout-head">
-              <div>
-                <p className="iad-kicker">SECURE CHECKOUT</p>
-                <h3>
-                  {paymentSuccess
-                    ? "Reserva confirmada"
-                    : "Completa tu reserva"}
-                </h3>
-              </div>
+function Services() {
+  return (
+    <section className="services">
+      <div className="services__grid">
+        {SERVICES.map((s, i) => (
+          <Reveal key={s.title} className="service-card" delay={i * 80}>
+            <span className="service-card__icon">
+              <Icon name={s.icon} />
+            </span>
+            <h3>{s.title}</h3>
+            <p>{s.text}</p>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-              <button
-                className="cart-close"
-                onClick={closeCheckout}
-                aria-label="Close"
-              >
-                <X size={22} />
-              </button>
+/* ────────────────────────────────────────────────────────────────────────
+   TESTIMONIALS
+   ──────────────────────────────────────────────────────────────────────── */
+
+function Testimonials() {
+  return (
+    <section id="opiniones" className="testimonials">
+      <Reveal className="section-head section-head--center">
+        <p className="eyebrow">Opiniones</p>
+        <h2>Lo que dicen quienes nos visitan</h2>
+        <a className="testimonials__aggregate" href={MAPS_URL} target="_blank" rel="noreferrer">
+          <Stars value={5} />
+          <span>4.8 sobre 10 reseñas en Google</span>
+        </a>
+      </Reveal>
+
+      <div className="testimonials__grid">
+        {TESTIMONIALS.map((t, i) => (
+          <Reveal key={t.name} className="testimonial-card" delay={i * 90}>
+            <p className="testimonial-card__text">“{t.text}”</p>
+            <div className="testimonial-card__footer">
+              <span className="testimonial-card__name">{t.name}</span>
+              <span className="testimonial-card__tag">
+                {t.tag} · {t.lang}
+              </span>
             </div>
+          </Reveal>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-            {paymentSuccess ? (
-              <div className="payment-success">
-                <div className="payment-success-icon">
-                  <Check size={32} />
-                </div>
+/* ────────────────────────────────────────────────────────────────────────
+   CONTACT
+   ──────────────────────────────────────────────────────────────────────── */
 
-                <h4>¡Pago realizado correctamente!</h4>
+function Contact() {
+  const [copied, setCopied] = useState(false);
+  const timeoutRef = useRef(null);
 
-                <p>
-                  Tu reserva ha sido confirmada. Recibirás los detalles de tu
-                  reserva con la información correspondiente.
-                </p>
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(ADDRESS);
+      setCopied(true);
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 2200);
+    } catch {
+      /* Clipboard API unavailable — silently ignore. */
+    }
+  };
 
-                <div className="payment-summary">
-                  {cartItems.map((c) => (
-                    <div key={c.id} className="payment-summary-row">
-                      <span>
-                        {c.name} × {c.qty}
-                      </span>
-                      <strong>{formatCOP(c.priceCOP * c.qty)}</strong>
-                    </div>
-                  ))}
+  useEffect(() => () => clearTimeout(timeoutRef.current), []);
 
-                  <div className="payment-summary-total">
-                    <span>{t.cart.total}</span>
-                    <strong>{formatCOP(cartTotal)}</strong>
-                  </div>
-                </div>
+  return (
+    <section id="contacto" className="contact">
+      <div className="contact__grid">
+        <Reveal className="contact__card">
+          <p className="eyebrow">Contacto</p>
+          <h2>Planeemos tu visita</h2>
+          <p className="contact__lead">
+            Escríbenos y te ayudamos a organizar el hospedaje y los tours para tu estadía en
+            Jardín.
+          </p>
 
-                <button
-                  className="btn-primary"
-                  style={{
-                    width: "100%",
-                    justifyContent: "center",
-                    marginTop: 20,
-                  }}
-                  onClick={closeCheckout}
-                >
-                  <CalendarCheck size={17} />
-                  Ver mis servicios
+          <dl className="contact__details">
+            <div>
+              <dt>
+                <Icon name="pin" /> Dirección
+              </dt>
+              <dd>
+                {ADDRESS}
+                <button className="link-btn" onClick={handleCopy}>
+                  {copied ? 'Copiado ✓' : 'Copiar'}
                 </button>
-              </div>
-            ) : (
-              <div className="checkout-body">
-                <div className="checkout-summary">
-                  <p className="checkout-label">Tu reserva</p>
+              </dd>
+            </div>
+            <div>
+              <dt>
+                <Icon name="phone" /> Teléfono
+              </dt>
+              <dd>
+                <a href={`tel:${PHONE_TEL}`}>{PHONE_DISPLAY}</a>
+              </dd>
+            </div>
+          </dl>
 
-                  {cartItems.map((c) => (
-                    <div key={c.id} className="checkout-summary-row">
-                      <div>
-                        <strong>{c.name}</strong>
-                        <span>× {c.qty}</span>
-                      </div>
-
-                      <strong>{formatCOP(c.priceCOP * c.qty)}</strong>
-                    </div>
-                  ))}
-
-                  <div className="checkout-total">
-                    <span>{t.cart.total}</span>
-                    <strong>{formatCOP(cartTotal)}</strong>
-                  </div>
-                </div>
-
-                <div className="checkout-form">
-                  <label>
-                    Nombre completo
-                    <input type="text" placeholder="Tu nombre" />
-                  </label>
-
-                  <label>
-                    Email
-                    <input type="email" placeholder="tu@email.com" />
-                  </label>
-
-                  <label>
-                    Fecha preferida
-                    <input type="date" />
-                  </label>
-
-                  <label>
-                    Número de participantes
-                    <input type="number" min="1" defaultValue={cartCount} />
-                  </label>
-
-                  <div className="fake-card">
-                    <div className="fake-card-header">
-                      <span>Pago seguro</span>
-                      <CreditCard size={18} />
-                    </div>
-
-                    <label>
-                      Número de tarjeta
-                      <input
-                        type="text"
-                        placeholder="4242 4242 4242 4242"
-                        maxLength={19}
-                      />
-                    </label>
-
-                    <div className="fake-card-row">
-                      <label>
-                        Vencimiento
-                        <input type="text" placeholder="MM/YY" />
-                      </label>
-
-                      <label>
-                        CVV
-                        <input type="text" placeholder="123" maxLength={3} />
-                      </label>
-                    </div>
-                  </div>
-
-                  <button
-                    className="btn-primary"
-                    style={{
-                      width: "100%",
-                      justifyContent: "center",
-                      marginTop: 8,
-                    }}
-                    onClick={simulatePayment}
-                  >
-                    <CreditCard size={17} />
-                    Pagar {formatCOP(cartTotal)}
-                  </button>
-
-                  <p className="checkout-disclaimer">
-                    Pago simulado para la versión actual. Conecta Wompi, ePayco
-                    o Stripe aquí cuando la pasarela real esté disponible.
-                  </p>
-                </div>
-              </div>
-            )}
+          <div className="contact__actions">
+            <a className="btn btn--primary btn--lg" href={WHATSAPP_URL} target="_blank" rel="noreferrer">
+              <Icon name="whatsapp" /> Escríbenos por WhatsApp
+            </a>
+            <a className="btn btn--outline btn--lg" href={MAPS_URL} target="_blank" rel="noreferrer">
+              <Icon name="pin" /> Ver en Google Maps
+            </a>
           </div>
-        </>
-      )}
+        </Reveal>
+
+        <Reveal className="contact__media" delay={120}>
+          <img src={GALLERY[4].src} alt={GALLERY[4].alt} loading="lazy" />
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   FOOTER
+   ──────────────────────────────────────────────────────────────────────── */
+
+function Footer() {
+  return (
+    <footer className="site-footer">
+      <div className="site-footer__grid">
+        <div>
+          <span className="wordmark wordmark--footer">
+            <span className="wordmark__t1">T</span>
+            <span className="wordmark__t2">u</span>
+            <span className="wordmark__t3">r</span>
+            <span className="wordmark__t4">i</span>
+            <span className="wordmark__t5">s</span>
+            <span className="wordmark__t1">t</span>
+            <span className="wordmark__t2">a</span>
+            <span className="wordmark__t3">s</span>
+          </span>
+          <p className="site-footer__tagline">
+            Agencia de turismo y hospedaje en Jardín, Antioquia.
+          </p>
+        </div>
+
+        <nav aria-label="Enlaces del pie de página">
+          {NAV_LINKS.map((link) => (
+            <a key={link.href} href={link.href}>
+              {link.label}
+            </a>
+          ))}
+        </nav>
+
+        <div className="site-footer__contact">
+          <a href={`tel:${PHONE_TEL}`}>{PHONE_DISPLAY}</a>
+          <span>{ADDRESS}</span>
+          <div className="trust-badges">
+            <span className="badge badge--dark">RNT 86908</span>
+            <span className="badge badge--dark">RNT 87117</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="site-footer__bottom">
+        <span>© {new Date().getFullYear()} Turistas — Jardín, Antioquia, Colombia</span>
+        <span>Hecho para quienes eligen conocer Jardín despacio.</span>
+      </div>
+    </footer>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+   APP
+   ──────────────────────────────────────────────────────────────────────── */
+
+export default function IAmDiverLanding() {
+  return (
+    <div className="app">
+      <Header />
+      <main>
+        <Hero />
+        <TrustStrip />
+        <About />
+        <Gallery />
+        <Services />
+        <Testimonials />
+        <Contact />
+      </main>
+      <Footer />
     </div>
   );
 }
