@@ -255,7 +255,7 @@ function Header() {
             <Icon name="phone" /> Llamar
           </a>
           <a className="btn btn--primary" href={WHATSAPP_URL} target="_blank" rel="noreferrer">
-            <Icon size = {24} name="whatsapp" /> WhatsApp
+            <Icon name="whatsapp" /> WhatsApp
           </a>
         </div>
 
